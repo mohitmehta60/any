@@ -24,9 +24,18 @@ const Login = () => {
         password
       });
       if (error) {
+        let errorMessage = error.message;
+        
+        // Provide more user-friendly error messages
+        if (error.message === "Invalid login credentials") {
+          errorMessage = "The email or password you entered is incorrect. Please check your credentials and try again.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Please check your email and click the confirmation link before signing in.";
+        }
+        
         toast({
           title: "Login Failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive"
         });
         setIsLoading(false);
@@ -127,6 +136,9 @@ const Login = () => {
                   Sign up here
                 </Link>
               </p>
+             <p className="text-xs text-gray-500 mt-2">
+               New to AgriCure? Create an account first to get started.
+             </p>
             </div>
           </CardContent>
         </Card>
