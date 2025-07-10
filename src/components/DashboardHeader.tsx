@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, User, Menu } from "lucide-react";
+import { LogOut, User, Menu, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,26 +9,53 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import ProfileModal from "./ProfileModal";
+import { supabase } from "@/lib/supabaseClient";
 
 interface DashboardHeaderProps {
   userName?: string;
+  onUserNameUpdate?: (newName: string) => void;
 }
 
-const DashboardHeader = ({ userName = "John Farmer" }: DashboardHeaderProps) => {
+const DashboardHeader = ({ userName = "John Farmer", onUserNameUpdate }: DashboardHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('userName');
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout Error",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleProfileUpdate = (profile: any) => {
+    if (onUserNameUpdate && profile.name) {
+      onUserNameUpdate(profile.name);
+      localStorage.setItem('userName', profile.name);
+    }
     toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
+      title: "Profile Updated",
+      description: "Your profile has been updated successfully.",
     });
-    navigate("/");
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur-sm bg-white/95">
+    <>
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur-sm bg-white/95">
       <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2 group transition-all duration-300 hover:scale-105">
@@ -50,8 +77,15 @@ const DashboardHeader = ({ userName = "John Farmer" }: DashboardHeaderProps) => 
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-white shadow-lg border border-gray-200 animate-in slide-in-from-top-2 duration-200">
                 <DropdownMenuItem className="hover:bg-grass-50 transition-colors duration-200">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="hover:bg-grass-50 transition-colors duration-200"
+                >
                   <User className="mr-2 h-4 w-4" />
-                  Profile
+                  Edit Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="hover:bg-red-50 text-red-600 transition-colors duration-200">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -75,8 +109,15 @@ const DashboardHeader = ({ userName = "John Farmer" }: DashboardHeaderProps) => 
                   <p className="text-xs text-gray-500">Farmer Dashboard</p>
                 </div>
                 <DropdownMenuItem className="hover:bg-grass-50 transition-colors duration-200">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="hover:bg-grass-50 transition-colors duration-200"
+                >
                   <User className="mr-2 h-4 w-4" />
-                  Profile
+                  Edit Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="hover:bg-red-50 text-red-600 transition-colors duration-200">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -87,7 +128,13 @@ const DashboardHeader = ({ userName = "John Farmer" }: DashboardHeaderProps) => 
           </div>
         </div>
       </div>
-    </header>
+      
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfileUpdate={handleProfileUpdate}
+      />
+    </>
   );
 };
 
