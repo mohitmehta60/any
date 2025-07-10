@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardHeader from "@/components/DashboardHeader";
 import EnhancedFarmOverview from "@/components/EnhancedFarmOverview";
 import RealTimeSoilAnalysis from "@/components/RealTimeSoilAnalysis";
 import EnhancedFertilizerForm from "@/components/EnhancedFertilizerForm";
 import EnhancedFertilizerRecommendations from "@/components/EnhancedFertilizerRecommendations";
+import RecommendationHistory from "@/components/RecommendationHistory";
 import { predictFertilizer, FERTILIZER_INFO, CROP_TYPES, SOIL_TYPES } from "@/services/fertilizerMLService";
+import { supabase } from "@/lib/supabaseClient";
 
 interface FormData {
   fieldName: string;
@@ -68,9 +70,19 @@ const Dashboard = () => {
   const [formData, setFormData] = useState<FormData | null>(null);
   const [recommendations, setRecommendations] = useState<EnhancedRecommendation | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [userName, setUserName] = useState(localStorage.getItem('userName') || 'John Farmer');
   
-  // Get user name from localStorage or use default
-  const userName = localStorage.getItem('userName') || 'John Farmer';
+  // Update last login when dashboard loads
+  useEffect(() => {
+    const updateLastLogin = async () => {
+      try {
+        await supabase.rpc('update_last_login');
+      } catch (error) {
+        console.error('Error updating last login:', error);
+      }
+    };
+    updateLastLogin();
+  }, []);
 
   const generateEnhancedRecommendations = async (data: FormData): Promise<EnhancedRecommendation> => {
     const pH = parseFloat(data.soilPH);
@@ -210,6 +222,62 @@ const Dashboard = () => {
     };
   };
 
+  const saveRecommendationToDatabase = async (data: FormData, recommendation: EnhancedRecommendation) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get or create a farm for this recommendation
+      let farmId = null;
+      const { data: existingFarms } = await supabase
+        .from('farms')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', data.fieldName)
+        .limit(1);
+
+      if (existingFarms && existingFarms.length > 0) {
+        farmId = existingFarms[0].id;
+      } else {
+        // Create new farm
+        const { data: newFarm } = await supabase
+          .from('farms')
+          .insert({
+            user_id: user.id,
+            name: data.fieldName,
+            size: parseFloat(data.fieldSize),
+            size_unit: data.sizeUnit,
+            soil_type: Object.keys(SOIL_TYPES).find(key => SOIL_TYPES[key as keyof typeof SOIL_TYPES] === parseInt(data.soilType))
+          })
+          .select('id')
+          .single();
+        
+        farmId = newFarm?.id;
+      }
+
+      if (farmId) {
+        // Save recommendation to database
+        await supabase
+          .from('fertilizer_recommendations')
+          .insert({
+            farm_id: farmId,
+            user_id: user.id,
+            crop_type: Object.keys(CROP_TYPES).find(key => CROP_TYPES[key as keyof typeof CROP_TYPES] === parseInt(data.cropType)) || data.cropType,
+            primary_fertilizer: recommendation.primaryFertilizer.name,
+            secondary_fertilizer: recommendation.secondaryFertilizer.name,
+            organic_options: recommendation.organicOptions,
+            application_timing: recommendation.applicationTiming,
+            cost_estimate: recommendation.costEstimate,
+            ml_prediction: recommendation.mlPrediction,
+            confidence_score: recommendation.mlPrediction.confidence,
+            status: 'pending'
+          });
+      }
+    } catch (error) {
+      console.error('Error saving recommendation:', error);
+    }
+  };
+
   const handleFormSubmit = async (data: FormData) => {
     setIsGenerating(true);
     setFormData(data);
@@ -217,6 +285,9 @@ const Dashboard = () => {
     try {
       const enhancedRecommendations = await generateEnhancedRecommendations(data);
       setRecommendations(enhancedRecommendations);
+      
+      // Save to database
+      await saveRecommendationToDatabase(data, enhancedRecommendations);
     } catch (error) {
       console.error('Error generating recommendations:', error);
     } finally {
@@ -226,7 +297,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader userName={userName} />
+      <DashboardHeader 
+        userName={userName} 
+        onUserNameUpdate={setUserName}
+      />
       
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <div className="mb-4 sm:mb-8">
@@ -237,7 +311,7 @@ const Dashboard = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsList className="grid w-full grid-cols-4 h-auto">
             <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 sm:px-4 py-2">
               Overview
             </TabsTrigger>
@@ -246,6 +320,9 @@ const Dashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="recommendations" className="text-xs sm:text-sm px-2 sm:px-4 py-2">
               ML Recommendations
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm px-2 sm:px-4 py-2">
+              History
             </TabsTrigger>
           </TabsList>
 
@@ -271,6 +348,10 @@ const Dashboard = () => {
                 formData={formData}
               />
             )}
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-4 sm:space-y-6">
+            <RecommendationHistory />
           </TabsContent>
         </Tabs>
       </div>

@@ -28,9 +28,11 @@ const Login = () => {
         
         // Provide more user-friendly error messages
         if (error.message === "Invalid login credentials") {
-          errorMessage = "The email or password you entered is incorrect. Please check your credentials and try again.";
+          errorMessage = "The email or password you entered is incorrect. Please check your credentials or create an account if you're new.";
         } else if (error.message.includes("Email not confirmed")) {
           errorMessage = "Please check your email and click the confirmation link before signing in.";
+        } else if (error.message.includes("signup_disabled")) {
+          errorMessage = "Account creation is currently disabled. Please contact support.";
         }
         
         toast({
@@ -41,6 +43,14 @@ const Login = () => {
         setIsLoading(false);
         return;
       }
+      
+      // Update last login
+      try {
+        await supabase.rpc('update_last_login');
+      } catch (loginError) {
+        console.error('Error updating last login:', loginError);
+      }
+      
       // Optionally, fetch user profile data here
       const userName = data.user?.user_metadata?.name || email.split('@')[0].replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, l => l.toUpperCase()) || 'Farmer';
       localStorage.setItem('userName', userName);
@@ -136,9 +146,9 @@ const Login = () => {
                   Sign up here
                 </Link>
               </p>
-             <p className="text-xs text-gray-500 mt-2">
-               New to AgriCure? Create an account first to get started.
-             </p>
+              <p className="text-xs text-gray-500 mt-2">
+                New to AgriCure? Create an account first to get started with personalized fertilizer recommendations.
+              </p>
             </div>
           </CardContent>
         </Card>

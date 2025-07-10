@@ -68,7 +68,7 @@ const Signup = () => {
 
       toast({
         title: "Account Created Successfully",
-        description: "Check your email to confirm your account.",
+        description: "Welcome to AgriCure! You can now sign in to access your personalized dashboard.",
       });
       navigate("/login");
     } catch (err: any) {
