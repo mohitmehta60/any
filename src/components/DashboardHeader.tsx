@@ -139,3 +139,5 @@ const DashboardHeader = ({ userName = "John Farmer", onUserNameUpdate }: Dashboa
 };
 
 export default DashboardHeader;
+  )
+}
