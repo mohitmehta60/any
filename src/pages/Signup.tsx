@@ -48,7 +48,7 @@ const Signup = () => {
         options: {
           data: {
             name: formData.name,
-            farmLocation: formData.farmLocation
+            farm_location: formData.farmLocation
           }
         }
       });
@@ -68,7 +68,7 @@ const Signup = () => {
 
       toast({
         title: "Account Created Successfully",
-        description: "Welcome to AgriCure! You can now sign in to access your personalized dashboard.",
+        description: "Welcome to AgriCure! Please check your email for verification, then you can sign in to access your personalized dashboard.",
       });
       navigate("/login");
     } catch (err: any) {

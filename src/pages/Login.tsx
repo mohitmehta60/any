@@ -46,13 +46,41 @@ const Login = () => {
       
       // Update last login
       try {
-        await supabase.rpc('update_last_login');
+        const { error: loginError } = await supabase.rpc('update_last_login');
+        if (loginError) {
+          console.error('Error updating last login:', loginError);
+        }
       } catch (loginError) {
         console.error('Error updating last login:', loginError);
       }
       
       // Optionally, fetch user profile data here
-      const userName = data.user?.user_metadata?.name || email.split('@')[0].replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, l => l.toUpperCase()) || 'Farmer';
+      let userName = 'Farmer';
+      
+      // Try to get name from user metadata first
+      if (data.user?.user_metadata?.name) {
+        userName = data.user.user_metadata.name;
+      } else {
+        // Try to fetch from user profile
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('name')
+            .eq('id', data.user.id)
+            .single();
+          
+          if (profile?.name) {
+            userName = profile.name;
+          } else {
+            // Fallback to email-based name
+            userName = email.split('@')[0].replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, l => l.toUpperCase()) || 'Farmer';
+          }
+        } catch (profileError) {
+          console.error('Error fetching user profile:', profileError);
+          userName = email.split('@')[0].replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, l => l.toUpperCase()) || 'Farmer';
+        }
+      }
+      
       localStorage.setItem('userName', userName);
       toast({
         title: "Login Successful",

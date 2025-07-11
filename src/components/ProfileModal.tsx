@@ -106,7 +106,8 @@ const ProfileModal = ({ isOpen, onClose, onProfileUpdate }: ProfileModalProps) =
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.rpc('update_user_profile', {
+      const { data, error } = await supabase
+        .rpc('update_user_profile', {
         user_name: formData.name || null,
         user_phone: formData.phone || null,
         user_bio: formData.bio || null,
@@ -124,9 +125,11 @@ const ProfileModal = ({ isOpen, onClose, onProfileUpdate }: ProfileModalProps) =
         return;
       }
 
-      const updatedProfile = data as UserProfile;
-      setProfile(updatedProfile);
-      onProfileUpdate(updatedProfile);
+      if (data) {
+        const updatedProfile = data as UserProfile;
+        setProfile(updatedProfile);
+        onProfileUpdate(updatedProfile);
+      }
       
       toast({
         title: "Success",

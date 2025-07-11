@@ -76,7 +76,10 @@ const Dashboard = () => {
   useEffect(() => {
     const updateLastLogin = async () => {
       try {
-        await supabase.rpc('update_last_login');
+        const { error } = await supabase.rpc('update_last_login');
+        if (error) {
+          console.error('Error updating last login:', error);
+        }
       } catch (error) {
         console.error('Error updating last login:', error);
       }

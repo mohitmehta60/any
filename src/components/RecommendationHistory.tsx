@@ -38,7 +38,8 @@ const RecommendationHistory = () => {
   const fetchRecommendationHistory = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_user_recommendation_history', {
+      const { data, error } = await supabase
+        .rpc('get_user_recommendation_history', {
         limit_count: 100,
         offset_count: 0
       });
@@ -82,7 +83,8 @@ const RecommendationHistory = () => {
 
   const updateRecommendationStatus = async (recommendationId: string, newStatus: 'pending' | 'applied' | 'scheduled') => {
     try {
-      const { data, error } = await supabase.rpc('update_recommendation_status', {
+      const { data, error } = await supabase
+        .rpc('update_recommendation_status', {
         recommendation_id: recommendationId,
         new_status: newStatus,
         application_date: newStatus === 'applied' ? new Date().toISOString() : null

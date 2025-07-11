@@ -91,17 +91,25 @@ export class DatabaseService {
   }
 
   static async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<boolean> {
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+    try {
+      const { data, error } = await supabase.rpc('update_user_profile', {
+        user_name: updates.name || null,
+        user_phone: (updates as any).phone || null,
+        user_bio: (updates as any).bio || null,
+        user_farm_location: updates.farm_location || null,
+        user_profile_image_url: (updates as any).profile_image_url || null
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Error updating user profile:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
       console.error('Error updating user profile:', error);
       return false;
     }
-
-    return true;
   }
 
   // Farm functions
